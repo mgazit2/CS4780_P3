@@ -1,0 +1,4 @@
+*.o
+logfile
+monitor
+child
