@@ -1,7 +1,7 @@
 #MAKEFILE 
 #MATAN GAZIT  
 CC = gcc 
-CFLAGS = -Wall -g -std=gnu99  
+CFLAGS = -Wall -g -pthread -std=gnu99  
 
 MSTR = monitor 
 MOBJ = main.o 
