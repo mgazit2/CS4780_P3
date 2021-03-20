@@ -25,6 +25,8 @@
 #define DEF_PROD 2 // default # producers (processes)
 #define DEF_CON 6 // default # consumers (processes)
 #define DEF_RUNTIME 100 // default program runtime before termination (seconds)
+#define MAX_PROCS 20 // maximum number of processes allowed to program
+#define TIME_SIZE 50 // for time string
 
 /*PROTOTYPES*/
 void print_usage();
@@ -32,12 +34,16 @@ void deallocate();
 void spawn_pc(int id);
 void timeout(int sig);
 void kill_all(int sig);
+void get_time();
 
 /*GLOBALS*/
 static char* _name; // program name
 int num_prod; // stores # of producers
 int num_cons; // stores # of consumers
 int runtime; // stores maximum program runtime
+FILE* file;
+char curr_time[50];
+int count;
 
 /*SHARED*/
 int sem_empty_key;
@@ -72,7 +78,13 @@ int filename_id;
 int filename_key;
 char* filename;
 
-int count;
+int curr_prod_id;
+int curr_prod_key;
+int* curr_prod;
+
+int curr_con_id;
+int curr_con_key;
+int* curr_con;
 
 int main (int argc, char* argv[])
 {
@@ -84,7 +96,6 @@ int main (int argc, char* argv[])
 	num_cons = DEF_CON;
 	runtime = DEF_RUNTIME;
 	//FILE* file;
-	// SIGNALS
 	
 	_name = argv[0];
 	char* file_out = "logfile"; // shared output filename for program children
@@ -133,6 +144,15 @@ int main (int argc, char* argv[])
 		} // end switch getopt
 	} // end while getopt
 
+	// check sum of prod and con <= 20
+	if (num_prod + num_cons > MAX_PROCS)
+	{
+		printf("Sum of chosen values for maximum number of producers and consumers exceeds %d\n", MAX_PROCS);
+		num_prod = DEF_PROD;
+		num_cons = DEF_CON;
+		printf("Variables were set to the default value noted in the README for this run\n");
+	}
+
 	/*Shared Memory ftok()*/
 	sem_empty_key = ftok("makefile", 1);
 	sem_full_key = ftok("makefile", 2);
@@ -142,6 +162,8 @@ int main (int argc, char* argv[])
 	out_key = ftok("makefile", 6);
 	group_pid_key = ftok("makefile", 7);
 	filename_key = ftok("makefile", 8);
+	curr_prod_key = ftok("makefile", 9);
+	curr_con_key = ftok("makefile", 10);
 
 	/*Shared Memory Allocation Checks*/
 	// sem empty
@@ -219,6 +241,7 @@ int main (int argc, char* argv[])
 	{
 		group_pid = (pid_t *)shmat(group_pid_id, NULL, 0);
 	}
+	// filename
 	if ((filename_id = shmget(filename_key, sizeof(char) * 26, IPC_CREAT | S_IRUSR | S_IWUSR)) < 0)
 	{
 		perror("ERROR: Shmget failed to allocate memory for filename\n");
@@ -228,6 +251,29 @@ int main (int argc, char* argv[])
 	{
 		filename = (char *)shmat(filename_id, NULL, 0);
 		strcpy(filename, file_out);
+		file = fopen(filename, "a");
+	}
+	// curr prod
+	if ((curr_prod_id = shmget(curr_prod_key, sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR)) < 0)
+	{
+		perror("ERROR: Shmget failed to allocate memory for curr_prod integer\n");
+		exit(1);
+	}
+	else
+	{
+		curr_prod = (int *)shmat(curr_prod_id, NULL, 0);
+		*curr_prod = 0;
+	}
+	// curr cons
+	if ((curr_con_id = shmget(curr_con_key, sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR)) < 0)
+	{
+		perror("ERROR: Shmget failed to allocate memory for curr_con integer\n");
+		exit(1);
+	}
+	else
+	{
+		curr_con = (int *)shmat(curr_con_id, NULL, 0);
+		*curr_con = 0;
 	}
 
 	pthread_mutex_init(&*mutex, NULL); // init mutex
@@ -240,30 +286,45 @@ int main (int argc, char* argv[])
 	
 	alarm(runtime); // set alarm
 
+	printf("\nProgram will run for %d seconds\n", runtime);
+	printf("Program is allowed %d producers\n", num_prod);
+	printf("Program is allowed %d consumers\n", num_cons);
+
 	//printf("Here");
-	while (i < 2)
+	while (i < num_prod)
 	{
 		int id;
 		id = 1;
 		spawn_pc(id);
 		i++;
+		(*curr_prod)++;
 		count++;
-		sleep(3);
+		sleep(1); // for log readability
 	}
 	i = 0;
 
-	while (i < 2)
+	while (i < num_cons)
 	{
 		int id;
 		id = 0;
 		spawn_pc(id);
 		i++;
+		(*curr_con)++;
 		count++;
-		sleep(3);
+		sleep(1); // for log readability
 	}
 	i = 0;
-	
-	sleep(10);
+
+	while (*curr_prod != 0 && *curr_con != 0)
+	{
+		if (*curr_prod == *curr_con) continue;
+		else printf("DISTURBANCE!!!!\n");
+	}
+
+	sleep(5);
+	get_time();
+	fprintf(file, "\nPARENT PROCESS LOGGING SUCCESFUL EXECUTION FINISHING AT TIME: %s\n", curr_time);
+	fclose(file);
 	deallocate();
 	printf("Back in main\n");
 	return EXIT_SUCCESS;
@@ -273,6 +334,11 @@ void print_usage()
 {
 	printf("monitor [-h] [-o logfile] [-p m] [-c n] [-t time]\n");
 	printf("See README for usage descriptions\n");
+	printf("[-h] Describe how the project should be run and then terminate.\n");
+	printf("[-o logfile] Name of the file to save logs; default: logfile\n");
+	printf("[-p m] Number of producers; default: m = 2\n");
+	printf("[-c n] Number of consumers; default: n = 6\n");
+	printf("[-t time] The time in seconds after which the process will terminate, even if it has not finished. default: time = 100\n");
 } // end print_usage()
 
 void deallocate()
@@ -300,6 +366,12 @@ void deallocate()
 
 	shmdt(filename);
 	shmctl(filename_id, IPC_RMID, NULL);
+
+	shmdt(curr_prod);
+	shmctl(curr_prod_id, IPC_RMID, NULL);
+
+	shmdt(curr_con);
+	shmctl(curr_con_id, IPC_RMID, NULL);
 
 	printf("Shared memory succesfully deallocated...\n");
 }
@@ -329,6 +401,9 @@ void timeout(int sig)
 	killpg((*group_pid), SIGTERM);
 	for (; i < 20; i++) wait(NULL);
 	printf("Exited all active processes...\n");
+	get_time();
+	fprintf(file, "\nPARENT PROCESS LOGGING TIMEOUT TERMINATION! EXECUTION FINISHING AT TIME: %s\n", curr_time);
+	fclose(file);
 	deallocate();
 	exit(1);
 }
@@ -341,6 +416,18 @@ void kill_all(int sig)
 	killpg((*group_pid), SIGTERM);
 	for (; i < 20; i++) wait(NULL);
 	printf("Exited all active processes... \n");
+	get_time();
+	fprintf(file, "\nPARENT PROCESS LOGGING I/O TERMINATION! EXECUTION FINISHING AT TIME: %s\n", curr_time);
+	fclose(file);
 	deallocate();
 	exit(1);
+}
+
+void get_time() 
+{   
+	time_t curr;
+	struct tm *loc_time;
+	curr = time(NULL);
+	loc_time = localtime(&curr);
+	strftime(curr_time, TIME_SIZE, "%H:%M:%S\n", loc_time);
 }

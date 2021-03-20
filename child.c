@@ -65,9 +65,18 @@ int filename_id;
 int filename_key;
 char* filename;
 
+int curr_prod_id;
+int curr_prod_key;
+int* curr_prod;
+
+int curr_con_id;
+int curr_con_key;
+int* curr_con;
+
 /*GLOBALS*/
 int state;
 char curr_time[TIME_SIZE];
+FILE* file;
 
 int main(int argc, char* argv[])
 {
@@ -75,7 +84,7 @@ int main(int argc, char* argv[])
 	signal(SIGINT, term_handler);
 
 	setvbuf(stdout, NULL, _IONBF, 0); // for debugging purposes
-	FILE* file;
+	//FILE* file;
 
 	if (argc == 1)
 	{
@@ -97,6 +106,8 @@ int main(int argc, char* argv[])
 	out_key = ftok("makefile", 6);
 	group_pid_key = ftok("makefile", 7);
 	filename_key = ftok("makefile", 8);
+	curr_prod_key = ftok("makefile", 9);
+	curr_con_key = ftok("makefile", 10);
 
 	/*Shared Memory Allocation Checks*/
 	// sem empty
@@ -180,6 +191,27 @@ int main(int argc, char* argv[])
 		filename = (char *)shmat(filename_id, NULL, 0);
 		file = fopen(filename, "a");
 	}
+	// curr prod
+	if ((curr_prod_id = shmget(curr_prod_key, sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR)) < 0)
+	{
+		perror("ERROR: Shmget failed to allocate memory for curr prod integer\n");
+		exit(1);
+	}
+	else
+	{
+		curr_prod = (int *)shmat(curr_prod_id, NULL, 0);
+	}
+	// curr con
+	if ((curr_con_id = shmget(curr_con_key, sizeof(int), IPC_CREAT | S_IRUSR | S_IWUSR)) < 0)
+	{
+		perror("ERROR: Shmget failed to allocate memory for curr con integer\n");
+		exit(1);
+	}
+	else
+	{
+		curr_con = (int *)shmat(curr_con_id, NULL, 0);
+	}
+
 
 	if (state == CON)
 	{
@@ -203,6 +235,7 @@ int main(int argc, char* argv[])
 		pthread_mutex_unlock(&*mutex);
 		sem_post(&*sem_empty);
 		printf("I am fed and exiting succesfully!\n");
+		(*curr_con)--;
 		fclose(file);
 		exit(0);
 	}
@@ -223,6 +256,7 @@ int main(int argc, char* argv[])
 		pthread_mutex_unlock(&*mutex);
 		sem_post(&*sem_full);
 		printf("I have finished producing succesfully\n");
+		(*curr_prod)--;
 		fclose(file);
 		exit(0);
 	}
@@ -240,6 +274,9 @@ int main(int argc, char* argv[])
 void term_handler(int sig)
 {
 	perror("Child: Received termination signal from parent... Exiting...\n");
+	get_time();
+	fprintf(file, "\nCHILD TERMINATED AT TIME %s WITH PID %d AND STATE %d\n", curr_time, getpid(), state);
+	fclose(file);
 	exit(1);
 }
 

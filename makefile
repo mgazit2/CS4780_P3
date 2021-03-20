@@ -17,7 +17,7 @@ SOUT = $(SLVE)
 all: 	$(MOUT) $(SOUT)  
 
 $(MSTR): $(MOBJ) 	 
-	$(CC) $(CFLAGS) -o  $@ $(MOBJ)  
+	$(CC) $(CFLAGS) -o $@ $(MOBJ)  
 
 $(SLVE): $(SOBJ) 	 
 	$(CC) $(CFLAGS) -o $@ $(SOBJ)  
