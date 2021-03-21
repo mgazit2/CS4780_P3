@@ -94,7 +94,9 @@ int main(int argc, char* argv[])
 	else // prints data from parent (process type identifier)
 	{
 		state = atoi(argv[1]);
-		printf("State: %d\n", state);
+		get_time();
+		printf("Launch time for process %d: %s\n", getpid(), curr_time);
+		//printf("State: %d\n", state);
 	}
 
 	/*Shared Memory ftok()*/

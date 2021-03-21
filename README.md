@@ -60,6 +60,8 @@ Issues:
 	BUG: I have encountered a bug in my program where sometimes it gets stuck in an infinite loop in the produce/consume stage.
 				Luckily, the termination commands work well and kill all processes if this occurs (timeout or i/o interrupt)
 
+	ANOTHER BUG: I DON'T KNOW WHY, BUT BY MAKING THE PROGRAM PRINT "EQUAL..." OVER AND OVER AGAIN, IT DOESN'T DIE IN A LOOP.................
+
 References:
 
 	This project is heavily built on my Assignment 2 from this class, this semester

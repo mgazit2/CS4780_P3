@@ -324,7 +324,11 @@ int main (int argc, char* argv[])
 	// loop keeps 'monitor' exec alive while 'child' execs work
 	while (*curr_prod != 0 && *curr_con != 0)
 	{
-		if (*curr_prod == *curr_con) continue;
+		if (*curr_prod == *curr_con)
+		{
+			printf("Equal...\n");
+			continue;
+		}
 		else if (*curr_prod > *curr_con)
 		{
 			int id;
@@ -334,21 +338,37 @@ int main (int argc, char* argv[])
 			(*curr_con)++;
 			count++;
 			sleep(1); // for log readability
-		}
+			continue;
+		}	
 		else
 		{
-			int id;
+		  int id;
 			id = 1;
 			spawn_pc(id);
 			i++;
 			(*curr_prod)++;
 			count++;
 			sleep(1); // for log readability
+			continue;
+		}
+
+		if (*curr_con > 0)
+		{
+			printf("In this weird loop area...\n");
+			int id;       
+			id = 1;
+			spawn_pc(id);
+			i++;
+			(*curr_prod)++;
+			count++;
+			sleep(1); // for log readability
+			continue;
 		}
 	}
 
 	// final checks before terminating
-	sleep(5);
+	printf("%d %d", *curr_prod, *curr_con);
+	sleep(10);
 	get_time();
 	fprintf(file, "\nPARENT PROCESS LOGGING SUCCESFUL EXECUTION FINISHING AT TIME: %s\n", curr_time);
 	fclose(file);
