@@ -318,7 +318,26 @@ int main (int argc, char* argv[])
 	while (*curr_prod != 0 && *curr_con != 0)
 	{
 		if (*curr_prod == *curr_con) continue;
-		else printf("DISTURBANCE!!!!\n");
+		else if (*curr_prod > *curr_con)
+		{
+			int id;
+			id = 0;
+			spawn_pc(id);
+			i++;
+			(*curr_con)++;
+			count++;
+			sleep(1); // for log readability
+		}
+		else
+		{
+			int id;
+			id = 1;
+			spawn_pc(id);
+			i++;
+			(*curr_prod)++;
+			count++;
+			sleep(1); // for log readability
+		}
 	}
 
 	sleep(5);

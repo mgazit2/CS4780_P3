@@ -227,6 +227,8 @@ int main(int argc, char* argv[])
 		fprintf(file, "\nITEM USED BY A PROCESS AT %s WITH PID %d AND STATE %d\n", curr_time, getpid(), state);
 		if (item != FOOD) {
 			printf("A process has starved!\n");
+			fprintf(file, "\nPROCESS STARVED AT %s WITH PID %d AND STATE %d\n", curr_time, getpid(), state);
+			fclose(file);
 			exit(1);
 		}
 		buffer[*out] = NO_FOOD;
@@ -262,7 +264,7 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		printf("I am nothing...\n");
+		printf("I am nothing... How did I get here?\n");
 		fclose(file);
 		exit(1);
 	}
