@@ -61,3 +61,26 @@ void check_state(int gpid, int curr_prods, int curr_cons)
 	}
 }
 
+void consume_wait(sem_t empty, sem_t full, pthread_mutex_t mutex)
+{
+	sem_wait(&full);
+	//pthread_mutex_lock(&mutex);
+}
+
+void consume_done(sem_t empty, sem_t full, pthread_mutex_t mutex)
+{
+	//pthread_mutex_unlock(&mutex);
+	sem_post(&empty);
+}
+
+void produce_wait(sem_t empty, sem_t full, pthread_mutex_t mutex)
+{   
+	sem_wait(&empty);
+	//pthread_mutex_lock(&mutex);
+}
+
+void produce_done(sem_t empty, sem_t full, pthread_mutex_t mutex)
+{   
+	//pthread_mutex_unlock(&mutex);
+	sem_post(&full);
+}

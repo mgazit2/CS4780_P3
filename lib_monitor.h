@@ -9,4 +9,7 @@
 void exec_prod(int gpid);
 void exec_con(int gpid);
 void check_state(int gpid, int curr_prods, int curr_cons);
-
+void consume_wait(sem_t empty, sem_t full, pthread_mutex_t mutex);
+void consume_done(sem_t empty, sem_t full, pthread_mutex_t mutex);
+void produce_wait(sem_t empty, sem_t full, pthread_mutex_t mutex);
+void produce_done(sem_t empty, sem_t full, pthread_mutex_t mutex);

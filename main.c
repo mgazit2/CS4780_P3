@@ -88,24 +88,26 @@ int* curr_con;
 
 int main (int argc, char* argv[])
 {
+	// initial calls
 	signal(SIGINT, kill_all);
 	signal(SIGALRM, timeout);
-
 	setvbuf(stdout, NULL, _IONBF, 0); // for debugging purposes
+	
+	// initial initializations
 	num_prod = DEF_PROD;
 	num_cons = DEF_CON;
 	runtime = DEF_RUNTIME;
-	//FILE* file;
-	
 	_name = argv[0];
 	char* file_out = "logfile"; // shared output filename for program children
 
+	// exits before shared memory allocation if no arguments found
 	if (argc == 1)
 	{
 		printf("Run program with -h for usage options...\n");
 		return EXIT_SUCCESS;
 	}
-
+	
+	// getopt loop
 	while (true)
 	{
 		int c = getopt(argc, argv, "ho:p:c:t:");
@@ -153,7 +155,7 @@ int main (int argc, char* argv[])
 		printf("Variables were set to the default value noted in the README for this run\n");
 	}
 
-	/*Shared Memory ftok()*/
+	/*Shared Memory ftok()'s*/
 	sem_empty_key = ftok("makefile", 1);
 	sem_full_key = ftok("makefile", 2);
 	mutex_key = ftok("makefile", 3);
@@ -281,8 +283,9 @@ int main (int argc, char* argv[])
 	sem_init(&*sem_full, 1, 0); // init full
 	sem_post(&*sem_empty); // starts the semaphore cycle
 
+	// set counters
 	int i = 0;
-	count = 1;
+	count = 1; // main is 1st process in monitor exec
 	
 	alarm(runtime); // set alarm
 
@@ -290,7 +293,9 @@ int main (int argc, char* argv[])
 	printf("Program is allowed %d producers\n", num_prod);
 	printf("Program is allowed %d consumers\n", num_cons);
 
-	//printf("Here");
+	// loop produces producers
+	
+	// the contents of these loops can be encapsulated for further readability
 	while (i < num_prod)
 	{
 		int id;
@@ -303,6 +308,7 @@ int main (int argc, char* argv[])
 	}
 	i = 0;
 
+	// loop produces consumers
 	while (i < num_cons)
 	{
 		int id;
@@ -315,6 +321,7 @@ int main (int argc, char* argv[])
 	}
 	i = 0;
 
+	// loop keeps 'monitor' exec alive while 'child' execs work
 	while (*curr_prod != 0 && *curr_con != 0)
 	{
 		if (*curr_prod == *curr_con) continue;
@@ -340,6 +347,7 @@ int main (int argc, char* argv[])
 		}
 	}
 
+	// final checks before terminating
 	sleep(5);
 	get_time();
 	fprintf(file, "\nPARENT PROCESS LOGGING SUCCESFUL EXECUTION FINISHING AT TIME: %s\n", curr_time);
@@ -349,6 +357,7 @@ int main (int argc, char* argv[])
 	return EXIT_SUCCESS;
 }
 
+// prints program usage
 void print_usage()
 {
 	printf("monitor [-h] [-o logfile] [-p m] [-c n] [-t time]\n");
@@ -360,6 +369,10 @@ void print_usage()
 	printf("[-t time] The time in seconds after which the process will terminate, even if it has not finished. default: time = 100\n");
 } // end print_usage()
 
+// marks all shared memory segments for deletion
+// does not force delete all memory segments
+// memory segments will remain in system if processes are still running
+// see ipcs(1) & ipcrm(1) for details
 void deallocate()
 {
 	shmdt(sem_empty);
@@ -392,9 +405,13 @@ void deallocate()
 	shmdt(curr_con);
 	shmctl(curr_con_id, IPC_RMID, NULL);
 
+	sem_destroy(&*sem_full);
+	sem_destroy(&*sem_empty);
+
 	printf("Shared memory succesfully deallocated...\n");
 }
 
+// spawns a producer/consumer
 void spawn_pc(int id)
 {
 	char d[10];
@@ -407,11 +424,14 @@ void spawn_pc(int id)
 			(*group_pid) = getpid();
 		}
 		setpgid(0, (*group_pid));
-		execl("./child", "child", d, NULL);
+		if (id == 0) execl("./consumer", "consumer", d, NULL);
+		else if (id == 1) execl("./producer", "producer", d, NULL);
+		//execl("./child", "child", d, NULL);
 		exit(0);
 	}
 }
 
+// signal handler for alarm
 void timeout(int sig)
 {
 	perror("timeout()");
@@ -427,6 +447,7 @@ void timeout(int sig)
 	exit(1);
 }
 
+// signal handler for i/o interrupt
 void kill_all(int sig)
 {
 	perror("kill_all()");
@@ -442,6 +463,7 @@ void kill_all(int sig)
 	exit(1);
 }
 
+// bad time function
 void get_time() 
 {   
 	time_t curr;

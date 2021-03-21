@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include "lib_monitor.h"
 
 #define TIME_SIZE 50
 
@@ -214,7 +215,7 @@ int main(int argc, char* argv[])
 
 	if (state == CON) // if executed as consumer
 	{
-		printf("I am a consumer\n"); // states its process type
+		/*printf("I am a consumer\n"); // states its process type
 		sleep((rand() % 10) + 1); // sleep between 1 and 10 seconds
 		printf("Awake and waiting on sem_full\n");
 		sem_wait(&*sem_full);
@@ -237,7 +238,7 @@ int main(int argc, char* argv[])
 		printf("I am fed and exiting succesfully!\n");
 		(*curr_con)--;
 		fclose(file);
-		exit(0);
+		exit(0); */
 	}
 	else if (state == PROD) // if executed as producer
 	{
@@ -245,14 +246,18 @@ int main(int argc, char* argv[])
 		sleep((rand() % 5) + 1); // sleep between 1 and 5 seconds
 		printf("Awake and waiting on sem_empty\n");
 		int item = FOOD;
-		get_time();
-		fprintf(file, "\nITEM USED BY A PROCESS AT %s WITH PID %d AND STATE %d\n", curr_time, getpid(), state);
+		//get_time();
+		//fprintf(file, "\nITEM USED BY A PROCESS AT %s WITH PID %d AND STATE %d\n", curr_time, getpid(), state);
 		sem_wait(&*sem_empty);
+		//produce_wait(*sem_empty, *sem_full, *mutex);
 		printf("Received sem_empty\n");
 		pthread_mutex_lock(&*mutex);
 		buffer[*in] = item;
+		get_time();
+		fprintf(file, "\nITEM USED BY A PROCESS AT %s WITH PID %d AND STATE %d\n", curr_time, getpid(), state);
 		pthread_mutex_unlock(&*mutex);
 		sem_post(&*sem_full);
+		//produce_done(*sem_empty, *sem_full, *mutex);
 		printf("I have finished producing succesfully\n");
 		(*curr_prod)--;
 		fclose(file);

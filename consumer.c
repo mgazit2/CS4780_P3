@@ -5,6 +5,8 @@
  * child.c
  *
  * child executable for program
+ * producer and consumer are effectively the same program
+ * 	enter different parts of the if statement
  */
 
 #include <stdlib.h>
@@ -22,6 +24,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include "lib_monitor.h"
 
 #define TIME_SIZE 50
 
@@ -218,6 +221,7 @@ int main(int argc, char* argv[])
 		sleep((rand() % 10) + 1); // sleep between 1 and 10 seconds
 		printf("Awake and waiting on sem_full\n");
 		sem_wait(&*sem_full);
+		//consume_wait(*sem_empty, *sem_full, *mutex);
 		printf("Received sem_full\n");
 		pthread_mutex_lock(&*mutex);
 		//printf("Waiting on mutex\n");
@@ -234,6 +238,7 @@ int main(int argc, char* argv[])
 		buffer[*out] = NO_FOOD;
 		pthread_mutex_unlock(&*mutex);
 		sem_post(&*sem_empty);
+		//consume_done(*sem_empty, *sem_full, *mutex);
 		printf("I am fed and exiting succesfully!\n");
 		(*curr_con)--;
 		fclose(file);
@@ -241,7 +246,7 @@ int main(int argc, char* argv[])
 	}
 	else if (state == PROD) // if executed as producer
 	{
-		printf("I am a producer\n");
+		/*printf("I am a producer\n");
 		sleep((rand() % 5) + 1); // sleep between 1 and 5 seconds
 		printf("Awake and waiting on sem_empty\n");
 		int item = FOOD;
@@ -256,7 +261,7 @@ int main(int argc, char* argv[])
 		printf("I have finished producing succesfully\n");
 		(*curr_prod)--;
 		fclose(file);
-		exit(0);
+		exit(0);*/
 	}
 	else // error, exit process
 	{
